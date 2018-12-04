@@ -21,7 +21,18 @@ class RealmAssorter<Object: RealmSwift.Object & UnmanagedConvertible> {
         var objects: Results<Object>
 
         var section: ArraySection<String, Object.UnmanagedType> {
-            return ArraySection(model: name, elements: objects.compactMap { $0.unmanaged })
+
+            var elements = [Object.UnmanagedType]()
+            elements.reserveCapacity(objects.count)
+            for object in objects {
+                guard let unmanaged = object.unmanaged else {
+                    continue
+                }
+
+                elements.append(unmanaged)
+            }
+
+            return ArraySection(model: name, elements: elements)
         }
     }
 
@@ -62,7 +73,11 @@ class RealmAssorter<Object: RealmSwift.Object & UnmanagedConvertible> {
         self.model?.invalidate()
         self.model = model.observe { _ in
             let oldValue = self.sections
-            let newValue = self.results.map { $0.section }
+            var newValue = [ArraySection<String, Object.UnmanagedType>]()
+            newValue.reserveCapacity(self.results.count)
+            for result in self.results {
+                newValue.append(result.section)
+            }
 
             let changes = StagedChangeset(source: oldValue, target: newValue)
 
